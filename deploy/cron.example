@@ -1,0 +1,2 @@
+# Run jobscout daily at 8:00 AM (no interactive viewer)
+0 8 * * * cd /home/user/jobscout && /usr/bin/uv run jobscout run --no-serve >> /var/log/jobscout.log 2>&1

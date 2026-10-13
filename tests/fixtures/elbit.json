@@ -1,0 +1,28 @@
+[
+  {
+    "jobId": 21001,
+    "jobTitle": "Embedded Software Engineer",
+    "jobCode": "1001",
+    "openDate": "2026-09-01T08:00:00",
+    "updateDate": "2026-09-02T08:00:00",
+    "locationAddress": null,
+    "requirements": "C and Linux kernel experience",
+    "skills": "",
+    "description": "&lt;div&gt;Develop firmware on ARM SoCs.&lt;/div&gt;&lt;div&gt;#Haifa&lt;/div&gt;",
+    "employerName": "Annapurna",
+    "employmentType": "Full time",
+    "area": "Haifa"
+  },
+  {
+    "jobId": 21002,
+    "jobTitle": "Contracts Manager",
+    "jobCode": "1002",
+    "openDate": "2026-09-03T08:00:00",
+    "locationAddress": "",
+    "requirements": "",
+    "skills": "",
+    "description": "&lt;div&gt;Commercial contracts.&lt;/div&gt;",
+    "employerName": "HQ",
+    "area": "Shfela"
+  }
+]

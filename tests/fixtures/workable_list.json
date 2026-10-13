@@ -1,0 +1,19 @@
+{
+  "total": 2,
+  "nextPage": "page-2",
+  "results": [
+    {
+      "id": "111",
+      "shortcode": "ABC111",
+      "title": "Firmware Engineer",
+      "department": "R&D",
+      "url": "https://apply.workable.com/acme/j/ABC111/",
+      "location": {
+        "city": "Tel Aviv",
+        "country": "Israel",
+        "telecommuting": false
+      },
+      "created_at": "2026-01-01"
+    }
+  ]
+}

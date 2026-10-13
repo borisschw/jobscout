@@ -1,0 +1,15 @@
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+data/
+out/
+.env
+*.db
+
+# Personal config. The *.example files are the public templates.
+config/profile.md
+config/preferences.yaml
+config/companies.yaml
+config/llm.yaml

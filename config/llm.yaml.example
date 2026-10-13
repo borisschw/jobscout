@@ -1,0 +1,30 @@
+# Copy this file to config/llm.yaml and edit it.
+# llm.yaml is gitignored. Nothing in it is published, and it never
+# shares another person's provider login.
+#
+# API keys do not belong here. Put them in .env (also gitignored):
+#   OPENAI_API_KEY=...
+#   ANTHROPIC_API_KEY=...
+#
+# provider: openai
+# model: gpt-4o-mini
+#
+# provider: anthropic
+# model: claude-sonnet-4-5
+#
+# provider: cursor
+# model: composer-2.5
+# command: cursor-agent
+# Uses the Cursor Agent CLI already logged in on this machine.
+# That login lives outside this repo. Do not copy someone else's llm.yaml.
+#
+# provider: ollama
+# model: llama3.1
+# base_url: http://localhost:11434
+
+provider: ollama
+model: llama3.1
+base_url: http://localhost:11434
+concurrency: 4
+max_calls: 0
+timeout_seconds: 120

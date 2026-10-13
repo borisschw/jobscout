@@ -1,0 +1,14 @@
+[
+  {
+    "id": "abc-123",
+    "text": "Platform Engineer",
+    "hostedUrl": "https://jobs.lever.co/acme/abc-123",
+    "categories": {
+      "location": "Remote",
+      "department": "Engineering",
+      "commitment": "Full-time"
+    },
+    "descriptionPlain": "Build platform infrastructure.",
+    "createdAt": 1700000000000
+  }
+]

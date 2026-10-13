@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>jobscout report</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, -apple-system, sans-serif; line-height: 1.5; color: #1a1a1a; background: #f5f5f5; }
+  .layout { display: flex; max-width: 1200px; margin: 0 auto; padding: 1.5rem; gap: 2rem; }
+  main { flex: 1; min-width: 0; }
+  aside { width: 260px; flex-shrink: 0; }
+  h1 { font-size: 1.5rem; margin-bottom: 0.5rem; }
+  .meta { color: #666; font-size: 0.875rem; margin-bottom: 1.5rem; }
+  h2 { font-size: 1.125rem; margin: 1.5rem 0 0.75rem; border-bottom: 1px solid #ddd; padding-bottom: 0.25rem; }
+  .card { background: #fff; border: 1px solid #ddd; border-radius: 6px; padding: 1rem; margin-bottom: 0.75rem; }
+  .card.hidden { display: none; }
+  .card.new { background: #fff4e8; border-color: #f5b57a; }
+  .card.applied { background: #dcfce7; border-color: #86efac; }
+  .new-flag { display: inline-block; margin-left: 0.4rem; padding: 0.05rem 0.4rem; border-radius: 999px; background: #ffedd5; color: #9a3412; font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.02em; vertical-align: middle; }
+  .card-header { display: flex; justify-content: space-between; align-items: start; gap: 0.5rem; }
+  .score { font-weight: 700; font-size: 1.25rem; color: #2563eb; }
+  .score.strong { color: #16a34a; }
+  .title { font-weight: 600; font-size: 1rem; }
+  .company { color: #666; font-size: 0.875rem; }
+  .location { color: #888; font-size: 0.8125rem; }
+  .why { margin-top: 0.5rem; font-size: 0.875rem; }
+  .skills { margin-top: 0.5rem; font-size: 0.8125rem; color: #555; }
+  .skills span { background: #e8f0fe; padding: 0.125rem 0.375rem; border-radius: 3px; margin-right: 0.25rem; }
+  .card-actions { display: flex; flex-direction: column; gap: 0.35rem; align-items: flex-end; }
+  .btn-ignore, .btn-applied, .btn-unapply { padding: 0.25rem 0.5rem; border-radius: 4px; cursor: pointer; font-size: 0.75rem; white-space: nowrap; }
+  .btn-ignore { background: #fee2e2; border: 1px solid #fca5a5; color: #991b1b; }
+  .btn-ignore:hover { background: #fecaca; }
+  .btn-applied, .btn-unapply { background: #dcfce7; border: 1px solid #86efac; color: #166534; }
+  .btn-applied:hover, .btn-unapply:hover { background: #bbf7d0; }
+  .failures { background: #fef3c7; border: 1px solid #fcd34d; padding: 0.75rem; border-radius: 6px; margin-bottom: 1rem; font-size: 0.875rem; }
+  aside h2 { font-size: 1rem; }
+  .run-summary h2 { margin-top: 0; }
+  .run-summary { background: #fff; border: 1px solid #ddd; border-radius: 6px; padding: 0.75rem 0.875rem; margin-bottom: 1.25rem; }
+  .run-summary h2 { margin-bottom: 0.5rem; }
+  .run-summary dl { display: grid; grid-template-columns: 1fr auto; gap: 0.2rem 0.75rem; font-size: 0.8125rem; }
+  .run-summary dt { color: #555; }
+  .run-summary dd { font-weight: 600; text-align: right; }
+  aside ul { list-style: none; }
+  aside li { margin-bottom: 0.5rem; font-size: 0.875rem; }
+  aside a { color: #2563eb; }
+  #ignore-cmd { display: none; position: fixed; bottom: 1rem; right: 1rem; background: #1e293b; color: #f8fafc; padding: 0.75rem 1rem; border-radius: 6px; font-family: monospace; font-size: 0.8125rem; max-width: 500px; word-break: break-all; }
+  #ignore-cmd.visible { display: block; }
+</style>
+</head>
+<body>
+<div class="layout">
+<aside>
+  {% if run_summary %}
+  <section class="run-summary">
+    <h2>Run summary</h2>
+    <dl>
+      {% for label, count in run_summary.rows %}
+      <dt>{{ label }}</dt><dd>{{ count }}</dd>
+      {% endfor %}
+    </dl>
+  </section>
+  {% endif %}
+  <h2>Watch manually</h2>
+  {% if watch_manually %}
+  <ul>
+  {% for w in watch_manually %}
+    <li><a href="{{ w.url }}" target="_blank">{{ w.name }}</a>{% if w.why %} — {{ w.why }}{% endif %}</li>
+  {% endfor %}
+  </ul>
+  {% else %}
+  <p style="font-size:0.875rem;color:#888;">None configured.</p>
+  {% endif %}
+</aside>
+<main>
+  <h1>jobscout</h1>
+  <p class="meta">Generated {{ generated_at }}</p>
+
+  {% if fetch_failures %}
+  <div class="failures">
+    <strong>Fetch failures:</strong>
+    {% for f in fetch_failures %}<div>{{ f }}</div>{% endfor %}
+  </div>
+  {% endif %}
+
+  {% if scoring_errors %}
+  <div class="failures">
+    <strong>Scoring failures:</strong>
+    {% for e in scoring_errors %}<div>{{ e }}</div>{% endfor %}
+  </div>
+  {% endif %}
+
+  {% for group in groups %}
+  <h2>{{ group.title }}</h2>
+  {% for sj in group.jobs %}
+  <div class="card{% if sj.is_new %} new{% endif %}{% if sj.applied %} applied{% endif %}" data-key="{{ sj.job.job_key }}">
+    <div class="card-header">
+      <div>
+        <span class="score {% if sj.verdict.verdict.value == 'strong' %}strong{% endif %}">{{ sj.verdict.score }}</span>
+        <div class="title"><a href="{{ sj.job.url }}" target="_blank">{{ sj.job.display_title }}</a>{% if sj.is_new %} <span class="new-flag">New</span>{% endif %}</div>
+        <div class="company">{{ sj.job.company }}</div>
+        <div class="location">{{ sj.job.location }}</div>
+      </div>
+      <div class="card-actions">
+        {% if sj.applied %}
+        <button class="btn-unapply" onclick="unapplyJob('{{ sj.job.job_key }}')">Unapply</button>
+        {% else %}
+        <button class="btn-applied" onclick="applyJob('{{ sj.job.job_key }}')">Applied</button>
+        {% endif %}
+        <button class="btn-ignore" onclick="ignoreJob('{{ sj.job.job_key }}')">Ignore</button>
+      </div>
+    </div>
+    <div class="why">{{ sj.verdict.why }}</div>
+    {% if sj.verdict.matched_skills %}
+    <div class="skills">{% for s in sj.verdict.matched_skills %}<span>{{ s }}</span>{% endfor %}</div>
+    {% endif %}
+  </div>
+  {% endfor %}
+  {% endfor %}
+
+  {% if not groups %}
+  {% if pending_scoring %}
+  <p>Scoring did not finish: {{ pending_scoring }} posting(s) still need an LLM score. The empty list is not a threshold miss.</p>
+  {% else %}
+  <p>No matches above threshold ({{ threshold }}).</p>
+  {% endif %}
+  {% endif %}
+</main>
+</div>
+
+<div id="ignore-cmd"></div>
+
+<script>
+const INTERACTIVE = {{ interactive | tojson }};
+const ignoredKeys = [];
+const appliedKeys = [];
+const unappliedKeys = [];
+
+function hideCard(key) {
+  const card = document.querySelector(`[data-key="${key}"]`);
+  if (card) card.classList.add('hidden');
+}
+
+function showCommand(text) {
+  const cmd = document.getElementById('ignore-cmd');
+  cmd.textContent = text;
+  cmd.classList.add('visible');
+}
+
+function ignoreJob(key) {
+  hideCard(key);
+  if (INTERACTIVE) {
+    fetch('/api/ignore', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({keys: [key]})
+    }).catch(() => {});
+  } else {
+    ignoredKeys.push(key);
+    showCommand('uv run jobscout ignore ' + ignoredKeys.join(' '));
+  }
+}
+
+function setApplyControl(card, applied) {
+  const current = card.querySelector('.btn-applied, .btn-unapply');
+  if (!current) return;
+  const key = card.getAttribute('data-key');
+  const button = document.createElement('button');
+  if (applied) {
+    card.classList.add('applied');
+    button.className = 'btn-unapply';
+    button.textContent = 'Unapply';
+    button.onclick = function () { unapplyJob(key); };
+  } else {
+    card.classList.remove('applied');
+    button.className = 'btn-applied';
+    button.textContent = 'Applied';
+    button.onclick = function () { applyJob(key); };
+  }
+  current.replaceWith(button);
+}
+
+function applyJob(key) {
+  const card = document.querySelector(`[data-key="${key}"]`);
+  if (card) setApplyControl(card, true);
+  if (INTERACTIVE) {
+    fetch('/api/apply', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({keys: [key]})
+    }).catch(() => {});
+  } else {
+    appliedKeys.push(key);
+    showCommand('uv run jobscout applied ' + appliedKeys.join(' '));
+  }
+}
+
+function unapplyJob(key) {
+  const card = document.querySelector(`[data-key="${key}"]`);
+  if (card) setApplyControl(card, false);
+  if (INTERACTIVE) {
+    fetch('/api/unapply', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({keys: [key]})
+    }).catch(() => {});
+  } else {
+    unappliedKeys.push(key);
+    showCommand('uv run jobscout applied --undo ' + unappliedKeys.join(' '));
+  }
+}
+</script>
+</body>
+</html>

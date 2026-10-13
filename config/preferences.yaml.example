@@ -1,0 +1,31 @@
+# Copy this file to config/preferences.yaml and edit it.
+# preferences.yaml is gitignored.
+
+looking_for: >
+  Roles you want. Example: senior backend engineer, platform engineer,
+  distributed systems.
+dealbreakers: >
+  Roles you do not want. Example: QA, support, sales, unpaid internships.
+location_scope: >
+  Where you will work. Example: your city, your country, or fully remote
+  in a given timezone.
+score_threshold: 65
+prefilter:
+  enabled: true
+  # Case-insensitive regexes. A job whose location matches none of these
+  # and none of the ambiguous patterns is dropped before scoring.
+  allowed_location_patterns:
+    - "your city"
+    - "your country"
+    - "remote"
+    - "hybrid"
+  denied_location_patterns:
+    - "a city you will not consider"
+  ambiguous_location_patterns:
+    - "multiple"
+    - "worldwide"
+    - "\\d+\\s+locations?"
+  title_blocklist:
+    - intern
+    - internship
+    - sales

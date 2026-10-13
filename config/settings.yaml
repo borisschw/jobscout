@@ -1,0 +1,16 @@
+# LLM provider, model, and credentials live in config/llm.yaml (gitignored).
+# Copy config/llm.yaml.example to config/llm.yaml and fill in your own provider.
+
+fetch:
+  concurrency: 8
+  timeout_seconds: 45
+  retries: 3
+  allow_browser: false
+  max_jobs_per_company: 0
+
+paths:
+  database: data/jobscout.db
+  output_dir: out
+  profile: config/profile.md
+  preferences: config/preferences.yaml
+  companies: config/companies.yaml

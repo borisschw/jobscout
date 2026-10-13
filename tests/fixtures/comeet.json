@@ -1,0 +1,17 @@
+[
+  {
+    "uid": "pos-1",
+    "name": "Full Stack Developer",
+    "url_active_page": "https://www.comeet.co/jobs/acme/pos-1",
+    "is_internal": false,
+    "location": {"city": "Herzliya", "country": "Israel"},
+    "department": "R&D",
+    "details": {"description": "<p>React and Node</p>"},
+    "time_updated": "2024-01-01"
+  },
+  {
+    "position_uid": "internal-1",
+    "name": "Internal Only",
+    "is_internal": true
+  }
+]

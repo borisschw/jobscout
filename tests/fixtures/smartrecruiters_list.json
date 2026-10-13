@@ -1,0 +1,14 @@
+{
+  "content": [
+    {
+      "id": "sr-1",
+      "name": "DevOps Engineer",
+      "ref": "https://jobs.smartrecruiters.com/Acme/sr-1",
+      "location": {"city": "Tel Aviv", "country": "IL"},
+      "department": {"label": "Engineering"},
+      "typeOfEmployment": {"label": "Full-time"},
+      "releasedDate": "2024-01-01"
+    }
+  ],
+  "totalFound": 1
+}

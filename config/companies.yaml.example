@@ -1,0 +1,109 @@
+# Copy this file to config/companies.yaml and edit it.
+# companies.yaml is gitignored.
+#
+# One sample per source. Each company is disabled so copying this file
+# does not start fetching. Delete `enabled: false` on the ones you use.
+# `search_text` here applies to every company that does not set its own.
+
+search_text:
+  - engineer
+
+companies:
+  # Board slug from boards.greenhouse.io/{token}
+  - name: Greenhouse Example
+    source: greenhouse
+    token: your-board-token
+    enabled: false
+
+  # Board slug from jobs.lever.co/{token}. Use region: eu for api.eu.lever.co.
+  - name: Lever Example
+    source: lever
+    token: your-board-token
+    region: us
+    enabled: false
+
+  # Board slug from jobs.ashbyhq.com/{token}
+  - name: Ashby Example
+    source: ashby
+    token: your-board-token
+    enabled: false
+
+  # Company identifier from the SmartRecruiters board URL.
+  - name: SmartRecruiters Example
+    source: smartrecruiters
+    token: your-company-id
+    enabled: false
+
+  # Comeet needs both values, and company_uid must be quoted.
+  - name: Comeet Example
+    source: comeet
+    token: your-api-token
+    company_uid: "00.000"
+    enabled: false
+
+  # host, tenant, and site come from the myworkdayjobs.com careers URL.
+  - name: Workday Example
+    source: workday
+    host: company.wd1.myworkdayjobs.com
+    tenant: company
+    site: External
+    enabled: false
+
+  # Amazon Jobs country code, such as US or ISR.
+  - name: Amazon Example
+    source: amazon
+    country: US
+    enabled: false
+
+  - name: Elbit Example
+    source: elbit
+    careers_url: https://example.com/careers
+    enabled: false
+
+  # Numeric LinkedIn company id. Quote it. country limits the search
+  # (IL, ISR, israel, or a LinkedIn geo id).
+  - name: LinkedIn Example
+    source: linkedin
+    token: "123456"
+    country: IL
+    enabled: false
+
+  # Account slug from apply.workable.com/{token}
+  - name: Workable Example
+    source: workable
+    token: your-account
+    enabled: false
+
+  - name: SuccessFactors Example
+    source: successfactors
+    careers_url: https://careers.example.com
+    enabled: false
+
+  - name: Teamme Example
+    source: teamme
+    careers_url: https://example.teamme.link
+    enabled: false
+
+  # Generic page scrape when no ATS is detected.
+  - name: HTML Example
+    source: html
+    careers_url: https://example.com/careers
+    enabled: false
+
+  # Same as html, but renders the page in a browser first.
+  - name: Browser Example
+    source: browser
+    careers_url: https://example.com/careers
+    enabled: false
+
+  # Detect the ATS from the careers page on each run.
+  - name: Auto Example
+    source: auto
+    careers_url: https://example.com/careers
+    enabled: false
+
+# Shown in the report, not fetched.
+watch_manually:
+  - name: Manual Example
+    url: https://example.com/careers
+    why: No supported board. Check this page yourself.

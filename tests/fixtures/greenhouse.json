@@ -1,0 +1,13 @@
+{
+  "jobs": [
+    {
+      "id": 12345,
+      "title": "Senior Backend Engineer",
+      "absolute_url": "https://boards.greenhouse.io/acme/jobs/12345",
+      "location": {"name": "Tel Aviv, Israel"},
+      "departments": [{"name": "Engineering"}],
+      "content": "<p>Build APIs with Python</p>",
+      "updated_at": "2024-06-01T00:00:00Z"
+    }
+  ]
+}

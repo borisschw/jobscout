@@ -1,0 +1,15 @@
+{
+  "hits": [
+    {
+      "id": "amz-1",
+      "title": "SDE II",
+      "job_path": "/en/jobs/amz-1",
+      "city": "Tel Aviv",
+      "country_code": "ISR",
+      "description": "Build services at scale.",
+      "business_category": "AWS",
+      "posted_date": "2024-01-01"
+    }
+  ],
+  "hitsFound": 1
+}

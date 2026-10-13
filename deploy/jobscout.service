@@ -1,0 +1,12 @@
+[Unit]
+Description=jobscout daily job scraper
+After=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/jobscout
+ExecStart=/usr/bin/uv run jobscout run --no-serve
+SuccessExitStatus=0 1
+
+[Install]
+WantedBy=multi-user.target

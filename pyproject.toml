@@ -1,0 +1,50 @@
+[project]
+name = "jobscout"
+version = "0.1.0"
+description = "Daily job scraper with LLM scoring"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "httpx",
+    "pydantic>=2",
+    "selectolax",
+    "tenacity",
+    "typer",
+    "rich",
+    "jinja2",
+    "pyyaml",
+    "python-dotenv",
+    "openai",
+    "anthropic",
+]
+
+[project.optional-dependencies]
+browser = ["playwright"]
+
+[project.scripts]
+jobscout = "jobscout.cli:app"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "pytest-asyncio",
+    "respx",
+    "ruff",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "C4"]
+ignore = ["B008"]

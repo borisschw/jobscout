@@ -1,0 +1,14 @@
+{
+  "jobs": [
+    {
+      "id": "ashby-1",
+      "title": "Software Engineer",
+      "jobUrl": "https://jobs.ashbyhq.com/acme/ashby-1",
+      "location": "Tel Aviv",
+      "department": "R&D",
+      "employmentType": "FullTime",
+      "descriptionPlain": "Write code.",
+      "publishedAt": "2024-01-15"
+    }
+  ]
+}

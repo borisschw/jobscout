@@ -1,0 +1,17 @@
+{
+  "total": 2,
+  "results": [
+    {
+      "id": "222",
+      "shortcode": "DEF222",
+      "title": "Linux Driver Engineer",
+      "department": "R&D",
+      "url": "https://apply.workable.com/acme/j/DEF222/",
+      "location": {
+        "city": "Haifa",
+        "country": "Israel"
+      },
+      "created_at": "2026-02-01"
+    }
+  ]
+}
