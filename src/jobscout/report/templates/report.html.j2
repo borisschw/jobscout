@@ -12,6 +12,7 @@
   aside { width: 260px; flex-shrink: 0; }
   h1 { font-size: 1.5rem; margin-bottom: 0.5rem; }
   .meta { color: #666; font-size: 0.875rem; margin-bottom: 1.5rem; }
+  #schedule-status.running { color: #9a3412; font-weight: 600; }
   h2 { font-size: 1.125rem; margin: 1.5rem 0 0.75rem; border-bottom: 1px solid #ddd; padding-bottom: 0.25rem; }
   .card { background: #fff; border: 1px solid #ddd; border-radius: 6px; padding: 1rem; margin-bottom: 0.75rem; }
   .card.hidden { display: none; }
@@ -75,6 +76,9 @@
 <main>
   <h1>jobscout</h1>
   <p class="meta">Generated {{ generated_at }}</p>
+  {% if schedule %}
+  <p class="meta" id="schedule-status">{{ schedule.label }}</p>
+  {% endif %}
 
   {% if fetch_failures %}
   <div class="failures">
@@ -132,6 +136,7 @@
 
 <script>
 const INTERACTIVE = {{ interactive | tojson }};
+const SCHEDULE = {{ (schedule if schedule else none) | tojson }};
 const ignoredKeys = [];
 const appliedKeys = [];
 const unappliedKeys = [];
@@ -194,6 +199,40 @@ function applyJob(key) {
     showCommand('uv run jobscout applied ' + appliedKeys.join(' '));
   }
 }
+
+function setScheduleBanner(text, running) {
+  const banner = document.getElementById('schedule-status');
+  if (!banner) return;
+  banner.textContent = text;
+  banner.classList.toggle('running', !!running);
+}
+
+function pollSchedule() {
+  const again = (ms) => setTimeout(pollSchedule, ms);
+  fetch('/api/status')
+    .then((res) => res.json())
+    .then((data) => {
+      if (!data.enabled) return;
+      if (data.running) {
+        setScheduleBanner('Checking companies…', true);
+        again(5000);
+        return;
+      }
+      const finished = data.last_finished_at || null;
+      if (finished && finished !== (SCHEDULE.lastFinishedAt || null)) {
+        location.reload();
+        return;
+      }
+      const label = data.error
+        ? 'The last check failed. ' + (data.next_label || '')
+        : (data.next_label || SCHEDULE.label);
+      setScheduleBanner(label, false);
+      again(30000);
+    })
+    .catch(() => again(30000));
+}
+
+if (SCHEDULE && SCHEDULE.enabled) pollSchedule();
 
 function unapplyJob(key) {
   const card = document.querySelector(`[data-key="${key}"]`);

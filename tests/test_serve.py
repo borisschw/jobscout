@@ -15,11 +15,47 @@ def _start_server(config, store):
     ViewerHandler.config = config
     ViewerHandler.store = store
     ViewerHandler.company_filter = None
+    ViewerHandler.scheduler = None
     server = ThreadingHTTPServer(("127.0.0.1", 0), ViewerHandler)
     port = server.server_address[1]
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     return server, port
+
+
+def test_dropped_client_does_not_print_a_traceback(app_config, project, capsys):
+    import socket
+    import struct
+    import time
+
+    config = load_config(project)
+    store = Store(config.db_path)
+    server, port = _start_server(config, store)
+    try:
+        sock = socket.create_connection(("127.0.0.1", port))
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_LINGER, struct.pack("ii", 1, 0))
+        sock.close()
+        time.sleep(0.3)
+        health = urllib.request.urlopen(f"http://127.0.0.1:{port}/healthz")
+        assert json.loads(health.read())["ok"] is True
+        captured = capsys.readouterr()
+        assert "Exception occurred" not in captured.err
+        assert "Connection reset by peer" not in captured.err
+    finally:
+        server.shutdown()
+        store.close()
+
+
+def test_viewer_urls_for_lan_and_localhost(monkeypatch):
+    from jobscout.serve import viewer_urls
+
+    monkeypatch.setattr("jobscout.serve._lan_ips", lambda: ["192.168.1.20", "10.0.0.5"])
+    assert viewer_urls("0.0.0.0", 8765) == [
+        "http://127.0.0.1:8765/",
+        "http://192.168.1.20:8765/",
+        "http://10.0.0.5:8765/",
+    ]
+    assert viewer_urls("127.0.0.1", 8765) == ["http://127.0.0.1:8765/"]
 
 
 def test_healthz_endpoint(app_config, project):
@@ -130,6 +166,54 @@ def test_page_shows_run_summary_and_new_jobs(app_config, project, make_job):
             html.split("Old Role", 1)[0],
         )
         assert old_cards[-1] == "card"
+    finally:
+        server.shutdown()
+        store.close()
+
+
+def test_schedule_banner_and_status(app_config, project):
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+
+    from jobscout.schedule import DailyScheduler
+
+    config = load_config(project)
+    config.settings.schedule.enabled = True
+    config.settings.schedule.at = "23:00"
+    store = Store(config.db_path)
+    morning = datetime(2026, 1, 15, 9, 0, tzinfo=ZoneInfo("Asia/Jerusalem"))
+    scheduler = DailyScheduler(
+        config,
+        store,
+        clock=lambda: morning,
+        runner=lambda _config, _store: None,
+    )
+    server, port = _start_server(config, store)
+    ViewerHandler.scheduler = scheduler
+    try:
+        html = urllib.request.urlopen(f"http://127.0.0.1:{port}/").read().decode()
+        assert 'id="schedule-status"' in html
+        assert "23:00" in html
+        assert "pollSchedule" in html
+        status = json.loads(urllib.request.urlopen(f"http://127.0.0.1:{port}/api/status").read())
+        assert status["enabled"] is True
+        assert status["running"] is False
+        assert status["at"] == "23:00"
+        assert status["next_label"] == "Next check today at 23:00"
+    finally:
+        server.shutdown()
+        store.close()
+
+
+def test_status_is_off_when_the_viewer_has_no_scheduler(app_config, project):
+    config = load_config(project)
+    store = Store(config.db_path)
+    server, port = _start_server(config, store)
+    try:
+        status = json.loads(urllib.request.urlopen(f"http://127.0.0.1:{port}/api/status").read())
+        html = urllib.request.urlopen(f"http://127.0.0.1:{port}/").read().decode()
+        assert status["enabled"] is False
+        assert 'id="schedule-status"' not in html
     finally:
         server.shutdown()
         store.close()

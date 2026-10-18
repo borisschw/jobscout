@@ -86,12 +86,39 @@ class PathsConfig(BaseModel):
     companies: str = "config/companies.yaml"
 
 
+def parse_hhmm(value: str) -> tuple[int, int]:
+    """Parse a local time of day. Minutes are two digits, as in 23:00."""
+    parts = value.strip().split(":")
+    if len(parts) != 2 or not parts[0].isdigit() or not parts[1].isdigit():
+        raise ValueError("schedule.at must be HH:MM, for example 23:00")
+    hour, minute = int(parts[0]), int(parts[1])
+    if hour > 23 or minute > 59 or len(parts[1]) != 2:
+        raise ValueError("schedule.at must be HH:MM, for example 23:00")
+    return hour, minute
+
+
+class ScheduleConfig(BaseModel):
+    """Daily check while the report viewer is running."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    enabled: bool = False
+    at: str = "23:00"
+
+    @field_validator("at")
+    @classmethod
+    def normalize_at(cls, value: str) -> str:
+        hour, minute = parse_hhmm(value)
+        return f"{hour:02d}:{minute:02d}"
+
+
 class SettingsConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     llm: LLMConfig = Field(default_factory=LLMConfig)
     fetch: FetchConfig = Field(default_factory=FetchConfig)
     paths: PathsConfig = Field(default_factory=PathsConfig)
+    schedule: ScheduleConfig = Field(default_factory=ScheduleConfig)
 
 
 class CompanyConfig(BaseModel):

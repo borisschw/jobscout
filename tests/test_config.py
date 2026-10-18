@@ -133,6 +133,45 @@ def test_companies_example_covers_each_source():
     assert all(not company.enabled for company in parsed.companies)
 
 
+def test_schedule_defaults_off(app_config):
+    assert app_config.settings.schedule.enabled is False
+    assert app_config.settings.schedule.at == "23:00"
+
+
+def test_schedule_normalizes_hour(project):
+    settings = project / "config" / "settings.yaml"
+    settings.write_text(
+        settings.read_text(encoding="utf-8") + "schedule:\n  enabled: true\n  at: '9:05'\n",
+        encoding="utf-8",
+    )
+    config = load_config(project)
+    assert config.settings.schedule.enabled is True
+    assert config.settings.schedule.at == "09:05"
+
+
+def test_schedule_rejects_bad_time(project):
+    from pydantic import ValidationError
+
+    settings = project / "config" / "settings.yaml"
+    settings.write_text(
+        settings.read_text(encoding="utf-8") + "schedule:\n  enabled: true\n  at: '25:00'\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(ValidationError, match="HH:MM"):
+        load_config(project)
+
+
+def test_shared_settings_run_at_23_00():
+    from pathlib import Path
+
+    from jobscout.config import ScheduleConfig, _load_yaml
+
+    settings = Path(__file__).resolve().parents[1] / "config" / "settings.yaml"
+    schedule = ScheduleConfig.model_validate(_load_yaml(settings)["schedule"])
+    assert schedule.enabled is True
+    assert schedule.at == "23:00"
+
+
 def test_empty_company_search_text_does_not_inherit_global():
     from jobscout.config import _validate_companies
 

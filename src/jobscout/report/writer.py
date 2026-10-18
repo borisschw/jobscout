@@ -10,6 +10,7 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from jobscout.config import AppConfig, WatchManuallyEntry
 from jobscout.models import ScoredJob, VerdictLabel
+from jobscout.schedule import next_check_label
 
 _SUMMARY_FIELDS = (
     ("Fetched", "fetched"),
@@ -108,6 +109,30 @@ def build_groups(
     return groups
 
 
+def _schedule_view(
+    config: AppConfig,
+    summary: dict | None,
+    interactive: bool,
+    schedule_enabled: bool | None,
+) -> dict | None:
+    """Banner data for a viewer page that reloads after the daily check."""
+    enabled = config.settings.schedule.enabled
+    if schedule_enabled is not None:
+        enabled = schedule_enabled
+    if not interactive or not enabled:
+        return None
+    at = config.settings.schedule.at
+    finished = ""
+    if summary is not None:
+        finished = str(summary.get("finished_at") or "")
+    return {
+        "enabled": True,
+        "at": at,
+        "label": next_check_label(datetime.now().astimezone(), at),
+        "lastFinishedAt": finished or None,
+    }
+
+
 def write_reports(
     config: AppConfig,
     matches: list[ScoredJob],
@@ -117,6 +142,7 @@ def write_reports(
     pending_scoring: int = 0,
     scoring_errors: list[str] | None = None,
     run: object | None = None,
+    schedule_enabled: bool | None = None,
 ) -> tuple[Path, Path]:
     output_dir = config.output_dir
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -147,6 +173,7 @@ def write_reports(
         scoring_errors=scoring_errors,
         generated_at=datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC"),
         run_summary=summary,
+        schedule=_schedule_view(config, summary, interactive, schedule_enabled),
     )
     md = _render_markdown(
         groups,

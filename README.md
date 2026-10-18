@@ -37,6 +37,16 @@ Templates in `config/` are safe to publish. The filled-in copies are gitignored:
 
 `settings.yaml` holds fetch and path settings and is shared. `companies.yaml` is your company list. The example has one entry per source, with `enabled: false` so a copied file does not fetch until you turn a company on.
 
+`schedule` runs one check per day while the viewer stays open:
+
+```yaml
+schedule:
+  enabled: true
+  at: "23:00"
+```
+
+`at` is local time. Start `uv run jobscout serve` once and leave the report tab open. At 23:00 that same process fetches and scores, and the page reloads when the check finishes. If the machine was asleep at 23:00, the next time the viewer is awake it runs that missed check once. `jobscout run --no-serve` is still a one-shot and does not schedule. `--schedule` / `--no-schedule` on `run` and `serve` override the setting for that process.
+
 `llm.yaml` is the only place the provider is chosen. The `cursor` provider calls the Cursor Agent CLI that is already logged in on that machine. That login is outside this repository, so publishing the project does not share a Cursor subscription. Use your own CLI login, or set `provider` to `openai`, `anthropic`, or `ollama`.
 
 ## Commands
@@ -68,7 +78,9 @@ uv run jobscout run --serve --port 8765 --open
 | `--no-report` | Skip writing the HTML and Markdown report. |
 | `--serve` / `--no-serve` | Start or skip the local viewer. A terminal starts it unless you pass `--no-serve`. |
 | `--port N` | Viewer port. Default is `8765`. |
+| `--host ADDR` | Address the viewer listens on. Default `0.0.0.0` accepts other PCs on the same LAN. `127.0.0.1` is this PC only. |
 | `--open` / `--no-open` | Open the viewer in a browser. |
+| `--schedule` / `--no-schedule` | Keep or skip the daily check while this viewer is open. The default is `schedule` in `settings.yaml`. |
 | `--verbose`, `-v` | Print fetch progress. |
 
 `uv run jobscout seed` is the same as `run --seed`.
@@ -141,5 +153,5 @@ uv run jobscout detect-cmd https://careers.example.com --add "Example"
 | --- | --- |
 | `status` | Counts of open, closed, ignored, applied, and pending jobs, plus the last run. |
 | `report` | Rebuild `out/latest.html` and `out/latest.md` from the database. |
-| `serve` | Open the local viewer without fetching. `--port` and `--open` work the same as on `run`. |
+| `serve` | Open the local viewer without fetching. `--port`, `--host`, `--open`, and `--schedule` work the same as on `run`. With the schedule enabled, leave this process and the browser tab open. Another PC on the same LAN can open the address printed as `On this network`. |
 | `detect-cmd URL` | Detect the careers-page source from a URL. `--add "Name"` appends a company block to `companies.yaml`. |

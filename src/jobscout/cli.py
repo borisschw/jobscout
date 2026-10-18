@@ -54,7 +54,18 @@ def run(
     no_report: Annotated[bool, typer.Option("--no-report")] = False,
     serve: Annotated[bool | None, typer.Option("--serve/--no-serve")] = None,
     port: Annotated[int, typer.Option("--port")] = 8765,
+    host: Annotated[
+        str,
+        typer.Option("--host", help="Listen address. 0.0.0.0 accepts other PCs on the LAN."),
+    ] = "0.0.0.0",
     open_browser: Annotated[bool, typer.Option("--open/--no-open")] = False,
+    schedule: Annotated[
+        bool | None,
+        typer.Option(
+            "--schedule/--no-schedule",
+            help="Daily check while the viewer is open. Defaults to settings.yaml.",
+        ),
+    ] = None,
     verbose: Annotated[bool, typer.Option("--verbose", "-v")] = False,
 ) -> None:
     """Fetch jobs, score new ones, and write a report."""
@@ -102,8 +113,10 @@ def run(
                 config,
                 store,
                 port,
+                host=host,
                 open_browser=open_browser,
                 company_filter=company or None,
+                schedule=schedule,
             )
         except SystemExit as e:
             exit_code = e.code if isinstance(e.code, int) else 0
@@ -344,13 +357,29 @@ def report(
 def serve(
     project: Annotated[Path | None, typer.Option("--project", "-p")] = None,
     port: Annotated[int, typer.Option("--port")] = 8765,
+    host: Annotated[
+        str,
+        typer.Option("--host", help="Listen address. 0.0.0.0 accepts other PCs on the LAN."),
+    ] = "0.0.0.0",
     open_browser: Annotated[bool, typer.Option("--open/--no-open")] = False,
+    schedule: Annotated[
+        bool | None,
+        typer.Option(
+            "--schedule/--no-schedule",
+            help="Daily check while the viewer is open. Defaults to settings.yaml.",
+        ),
+    ] = None,
 ) -> None:
-    """Start the local report viewer."""
+    """Start the local report viewer.
+
+    When the schedule in settings.yaml is enabled, this process also fetches
+    and scores once a day. Leave the report tab open; it reloads when the
+    check finishes.
+    """
     from jobscout.serve import main as serve_main
 
     root = (project or Path.cwd()).resolve()
-    serve_main(root, port, open_browser)
+    serve_main(root, port, open_browser, schedule, host)
 
 
 @app.command()

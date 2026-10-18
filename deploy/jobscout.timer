@@ -1,5 +1,7 @@
 [Unit]
 Description=Run jobscout daily
+# Headless timer. Skip it when the viewer stays open: settings.yaml
+# schedule.enabled runs the check inside that process.
 
 [Timer]
 OnCalendar=daily

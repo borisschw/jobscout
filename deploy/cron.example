@@ -1,2 +1,4 @@
-# Run jobscout daily at 8:00 AM (no interactive viewer)
+# Headless daily run, for a machine that does not keep the viewer open.
+# When schedule.enabled is true in config/settings.yaml, leave
+# `uv run jobscout serve` running instead of installing this line.
 0 8 * * * cd /home/user/jobscout && /usr/bin/uv run jobscout run --no-serve >> /var/log/jobscout.log 2>&1

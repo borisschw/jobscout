@@ -14,3 +14,9 @@ paths:
   profile: config/profile.md
   preferences: config/preferences.yaml
   companies: config/companies.yaml
+
+# While the viewer stays open, fetch and score once a day at this local time.
+# The open report tab reloads when that check finishes.
+schedule:
+  enabled: true
+  at: "23:00"
