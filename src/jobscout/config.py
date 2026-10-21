@@ -84,6 +84,7 @@ class PathsConfig(BaseModel):
     profile: str = "config/profile.md"
     preferences: str = "config/preferences.yaml"
     companies: str = "config/companies.yaml"
+    company_types: str = "config/company_types.yaml"
 
 
 def parse_hhmm(value: str) -> tuple[int, int]:
@@ -171,6 +172,41 @@ class CompanyConfig(BaseModel):
         for field_name in required.get(source, []):
             if getattr(self, field_name) in (None, ""):
                 raise ValueError(f"source '{source}' requires field '{field_name}'")
+        return self
+
+
+class CompanyTypeConfig(BaseModel):
+    """One kind of company `jobscout discover` should search for."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    name: str
+    description: str = ""
+    queries: list[str] = Field(default_factory=list)
+
+    @field_validator("queries")
+    @classmethod
+    def queries_not_empty(cls, value: list[str]) -> list[str]:
+        cleaned = [query.strip() for query in value if query and query.strip()]
+        if not cleaned:
+            raise ValueError("each company type needs at least one query")
+        return cleaned
+
+
+class CompanyTypesFile(BaseModel):
+    """Search criteria for discovering companies. Gitignored; the example is the template."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    location: str = ""
+    types: list[CompanyTypeConfig]
+    ignore_names: list[str] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def unique_type_names(self) -> CompanyTypesFile:
+        names = [company_type.name.casefold() for company_type in self.types]
+        if len(names) != len(set(names)):
+            raise ValueError("company type names must be unique")
         return self
 
 
@@ -305,6 +341,13 @@ def _apply_llm_file(root: Path, settings_data: dict[str, Any]) -> None:
     if "llm" in settings_data:
         return
     raise _missing_user_file(llm_path)
+
+
+def load_company_types(path: Path) -> CompanyTypesFile:
+    """Load the gitignored company-type file used by `jobscout discover`."""
+    if not path.is_file():
+        raise _missing_user_file(path)
+    return CompanyTypesFile.model_validate(_load_yaml(path))
 
 
 def load_config(project_root: Path | None = None) -> AppConfig:

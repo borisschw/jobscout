@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import re
 from collections.abc import Iterator
 from urllib.parse import urljoin, urlparse
@@ -361,8 +362,14 @@ async def detect_ats(
     return CompanyConfig(name="", source="html", careers_url=url)
 
 
+def _yaml_name(name: str) -> str:
+    if re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9 ._+-]*", name):
+        return name
+    return json.dumps(name)
+
+
 def format_yaml_block(name: str, config: CompanyConfig) -> str:
-    lines = [f"  - name: {name}", f"    source: {config.source}"]
+    lines = [f"  - name: {_yaml_name(name)}", f"    source: {config.source}"]
     field_map = {
         "token": config.token,
         "host": config.host,

@@ -52,6 +52,12 @@ def test_format_yaml_block():
     assert "token: acme" in block
 
 
+def test_format_yaml_block_quotes_names_that_break_yaml():
+    cfg = CompanyConfig(name="Acme", source="greenhouse", token="acme")
+    block = format_yaml_block("Johnson & Johnson", cfg)
+    assert 'name: "Johnson & Johnson"' in block
+
+
 def test_detect_comeet_from_json_embed_and_url_uid():
     html = '{"token": "abc123", "company-name": "Acme"}'
     url = "https://www.comeet.com/jobs/acme/18.007"

@@ -12,4 +12,5 @@ out/
 config/profile.md
 config/preferences.yaml
 config/companies.yaml
+config/company_types.yaml
 config/llm.yaml

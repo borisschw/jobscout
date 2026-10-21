@@ -11,8 +11,9 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
-from jobscout.config import load_config
+from jobscout.config import load_company_types, load_config
 from jobscout.detect import detect_ats, format_yaml_block
+from jobscout.discover import append_discovered, discover_companies, search_duckduckgo
 from jobscout.matching.prompts import prompt_fingerprint
 from jobscout.report.writer import write_reports
 from jobscout.runner import RunOptions, run_pipeline
@@ -169,6 +170,90 @@ def detect_cmd(
         text = text.rstrip() + "\n" + block + "\n"
         companies_path.write_text(text, encoding="utf-8")
         console.print(f"Added to {companies_path}")
+
+
+@app.command()
+def discover(
+    project: Annotated[Path | None, typer.Option("--project", "-p")] = None,
+    type_name: Annotated[
+        list[str] | None,
+        typer.Option("--type", help="Only this company type. Repeat the flag to select more."),
+    ] = None,
+    query: Annotated[
+        list[str] | None,
+        typer.Option("--query", help="Extra search query. Repeat the flag to add more."),
+    ] = None,
+    dry_run: Annotated[
+        bool,
+        typer.Option("--dry-run", help="Show new boards without writing companies.yaml."),
+    ] = False,
+    max_fetches: Annotated[
+        int,
+        typer.Option("--max-fetches", help="Career pages to open. 0 opens every result."),
+    ] = 20,
+) -> None:
+    """Search company types and append new career boards to companies.yaml."""
+    root = (project or Path.cwd()).resolve()
+    config = load_config(root)
+    types_file = load_company_types(root / config.settings.paths.company_types)
+    client = make_client(config.settings.fetch)
+    timeout = float(config.settings.fetch.timeout_seconds)
+
+    async def _search(text: str):
+        return await search_duckduckgo(client, text, timeout)
+
+    async def _detect(url: str):
+        return await detect_ats(url, client, config.settings.fetch)
+
+    async def _run():
+        try:
+            return await discover_companies(
+                types_file,
+                config.companies.companies,
+                _search,
+                _detect,
+                only_types=type_name,
+                extra_queries=query,
+                max_fetches=max_fetches,
+            )
+        finally:
+            await client.aclose()
+
+    try:
+        found = asyncio.run(_run())
+    except ValueError as exc:
+        console.print(str(exc))
+        raise typer.Exit(1) from exc
+
+    for company in found.added:
+        kinds = ", ".join(company.types)
+        console.print(f"{company.name} ({company.config.source}): {kinds}")
+        console.print(format_yaml_block(company.name, company.config))
+        console.print()
+
+    if found.already_tracked:
+        console.print(f"Already tracked: {len(found.already_tracked)}")
+    if found.skipped_unsupported:
+        console.print(f"No supported board: {len(found.skipped_unsupported)}")
+    if found.errors:
+        console.print("Search errors:")
+        for err in found.errors[:8]:
+            console.print(f"  {err}")
+
+    if not found.added:
+        console.print("No new companies.")
+        nothing_else = not found.already_tracked and not found.skipped_unsupported
+        if found.errors and nothing_else:
+            raise typer.Exit(1)
+        return
+
+    if dry_run:
+        console.print(f"Would add {len(found.added)} companies.")
+        return
+
+    companies_path = root / config.settings.paths.companies
+    append_discovered(companies_path, found.added)
+    console.print(f"Added {len(found.added)} companies to {companies_path}")
 
 
 @app.command("jobs")

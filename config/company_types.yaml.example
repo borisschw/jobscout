@@ -1,0 +1,65 @@
+# Copy this file to config/company_types.yaml and edit it.
+# company_types.yaml is gitignored.
+#
+# `jobscout discover` reads this file, searches for career pages, and appends
+# new boards to companies.yaml. `location` is added to each query that does
+# not already mention it. A daily `jobscout run` does not read this file.
+
+location: your country
+
+types:
+  - name: embedded
+    description: >
+      Companies that hire embedded software, firmware, BSP, or RTOS engineers.
+    queries:
+      - embedded software engineer careers
+      - firmware engineer site:comeet.com/jobs
+
+  - name: linux-kernel
+    description: >
+      Companies with Linux kernel, device driver, or embedded Linux roles.
+    queries:
+      - '"linux kernel" engineer careers'
+      - '"embedded linux" OR "device driver" engineer careers'
+
+  - name: asic
+    description: >
+      ASIC, SoC, and semiconductor companies that design or build silicon.
+    queries:
+      - ASIC OR SoC engineer careers
+      - semiconductor company careers site:comeet.com/jobs
+
+  - name: hardware
+    description: >
+      Companies that develop hardware (boards, sensors, robotics, medical
+      devices, networking equipment) and may hire embedded or kernel engineers.
+    queries:
+      - hardware company embedded engineer careers
+      - robotics OR lidar OR drone embedded careers site:comeet.com/jobs
+
+  - name: ai-accelerator
+    description: >
+      Companies that build AI accelerators, NPUs, or GPUs.
+    queries:
+      - '"AI accelerator" OR GPU engineer careers'
+      - 'NPU OR "AI chip" OR GPU careers site:comeet.com/jobs'
+
+  - name: ai-infrastructure
+    description: >
+      Companies that build AI infrastructure: clusters, fabrics, and the
+      systems that connect accelerators.
+    queries:
+      - '"AI infrastructure" engineer careers'
+      - '"AI cluster" OR "AI fabric" networking careers'
+
+  - name: ai-hardware
+    description: >
+      Companies that develop AI-related hardware, such as inference and
+      training systems.
+    queries:
+      - '"AI hardware" engineer careers'
+      - '"inference" OR "training" hardware chip careers site:comeet.com/jobs'
+
+# Case-insensitive substrings. A result whose company name contains one of
+# these is not added.
+ignore_names: []

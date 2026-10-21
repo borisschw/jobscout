@@ -14,6 +14,7 @@ uv sync --group dev
 cp config/profile.md.example config/profile.md
 cp config/preferences.yaml.example config/preferences.yaml
 cp config/companies.yaml.example config/companies.yaml
+cp config/company_types.yaml.example config/company_types.yaml
 cp config/llm.yaml.example config/llm.yaml
 uv run jobscout run
 uv run pytest
@@ -32,10 +33,13 @@ Templates in `config/` are safe to publish. The filled-in copies are gitignored:
 | `profile.md.example` | `profile.md` | Your CV |
 | `preferences.yaml.example` | `preferences.yaml` | Roles, locations, and prefilter rules |
 | `companies.yaml.example` | `companies.yaml` | Companies you want to poll |
+| `company_types.yaml.example` | `company_types.yaml` | Kinds of companies to search for |
 | `llm.yaml.example` | `llm.yaml` | Your own LLM provider and model |
 | `.env.example` | `.env` | `OPENAI_API_KEY` or `ANTHROPIC_API_KEY`, if you use those providers |
 
 `settings.yaml` holds fetch and path settings and is shared. `companies.yaml` is your company list. The example has one entry per source, with `enabled: false` so a copied file does not fetch until you turn a company on.
+
+`company_types.yaml` describes the kinds of companies you want (embedded, Linux kernel, ASIC, hardware, and so on) and the queries used to find them. `jobscout discover` searches those queries and appends new career boards to `companies.yaml`. A normal `jobscout run` does not read this file.
 
 `schedule` runs one check per day while the viewer stays open:
 
@@ -147,6 +151,7 @@ uv run jobscout status
 uv run jobscout report
 uv run jobscout serve --port 8765 --open
 uv run jobscout detect-cmd https://careers.example.com --add "Example"
+uv run jobscout discover --dry-run
 ```
 
 | Command | What it does |
@@ -155,3 +160,4 @@ uv run jobscout detect-cmd https://careers.example.com --add "Example"
 | `report` | Rebuild `out/latest.html` and `out/latest.md` from the database. |
 | `serve` | Open the local viewer without fetching. `--port`, `--host`, `--open`, and `--schedule` work the same as on `run`. With the schedule enabled, leave this process and the browser tab open. Another PC on the same LAN can open the address printed as `On this network`. |
 | `detect-cmd URL` | Detect the careers-page source from a URL. `--add "Name"` appends a company block to `companies.yaml`. |
+| `discover` | Search `company_types.yaml` and append new boards to `companies.yaml`. `--type` limits the search to one type, `--query` adds a query, `--dry-run` prints without writing, and `--max-fetches` caps how many career pages are opened. |
