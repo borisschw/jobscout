@@ -1,9 +1,11 @@
 """Tests for report generation."""
 
 import re
+from datetime import datetime, timezone
 
 from jobscout.models import Job, ScoredJob, Verdict, VerdictLabel, position_id_from_external
-from jobscout.report.writer import build_groups, write_reports
+from jobscout.report.writer import build_groups, last_scan_stamp, local_stamp, write_reports
+from jobscout.schedule import parse_timestamp
 
 
 def test_display_title_appends_position_id_once():
@@ -43,25 +45,38 @@ def test_display_title_appends_position_id_once():
     assert linked.display_title == "Driver Engineer"
 
 
-def test_build_groups_orders_new_strong_and_worth(app_config, make_job):
+def test_build_groups_lists_each_job_once(app_config, make_job):
     threshold = 60
-    job = make_job()
-    strong = ScoredJob(
-        job=job,
+    new_strong = ScoredJob(
+        job=make_job(),
         verdict=Verdict(score=90, verdict=VerdictLabel.STRONG),
-        first_seen="2024-01-01",
+        first_seen="2024-01-02",
         is_new=True,
     )
+    old_strong = ScoredJob(
+        job=make_job(external_id="2", title="Older Strong Role"),
+        verdict=Verdict(score=80, verdict=VerdictLabel.STRONG),
+        first_seen="2024-01-01",
+        is_new=False,
+    )
     possible = ScoredJob(
-        job=make_job(external_id="2", title="Possible Role"),
+        job=make_job(external_id="3", title="Possible Role"),
         verdict=Verdict(score=65, verdict=VerdictLabel.POSSIBLE),
         first_seen="2024-01-01",
         is_new=False,
     )
-    groups = build_groups([strong, possible], threshold)
-    titles = [g.title for g in groups]
-    assert "New since the last run" in titles
-    assert "Strong matches" in titles
+    groups = build_groups([new_strong, old_strong, possible], threshold)
+    assert [g.title for g in groups] == [
+        "New since the last run",
+        "Strong matches",
+        "Worth a look (score >= 60)",
+    ]
+    keys = [job.job.job_key for group in groups for job in group.jobs]
+    assert keys == [
+        new_strong.job.job_key,
+        old_strong.job.job_key,
+        possible.job.job_key,
+    ]
 
 
 def test_write_reports_creates_files(app_config, make_job, tmp_path):
@@ -81,6 +96,9 @@ def test_write_reports_creates_files(app_config, make_job, tmp_path):
     md_text = md.read_text(encoding="utf-8")
     assert "Senior Backend Engineer (123)" in content
     assert "Senior Backend Engineer (123)" in md_text
+    assert 'id="applied-count">0<' in content
+    assert 'id="open-count">1<' in content
+    assert "**Shown:** 0 applied, 1 not applied" in md_text
     assert "Applied" in content
     assert 'class="btn-applied"' in content
 
@@ -99,6 +117,9 @@ def test_write_reports_colors_applied_jobs(app_config, make_job, tmp_path):
     html_text = html.read_text(encoding="utf-8")
     md_text = md.read_text(encoding="utf-8")
     assert "Strong matches" in html_text
+    assert 'id="applied-count">1<' in html_text
+    assert 'id="open-count">0<' in html_text
+    assert "**Shown:** 1 applied, 0 not applied" in md_text
     assert "Already applied" not in html_text
     assert "Applied Role" in html_text
     assert 'class="card applied"' in html_text
@@ -153,6 +174,10 @@ def test_write_reports_shows_summary_and_highlights_new_jobs(app_config, make_jo
     assert "**Fetched:** 12" in md_text
     assert new_job.is_new is True
     assert old_job.is_new is False
+    finished = parse_timestamp(run["finished_at"])
+    assert finished is not None
+    assert f"Last scan {local_stamp(finished)}" in html_text
+    assert "Generated" not in html_text
 
 
 def test_write_reports_explains_pending_scoring(app_config, tmp_path):
@@ -172,3 +197,23 @@ def test_write_reports_explains_pending_scoring(app_config, tmp_path):
     assert "No matches above threshold" not in html_text
     assert "Scoring did not finish: 483" in md_text
     assert "cursor-agent" in html_text
+    assert "Last scan" not in html_text
+    assert "Generated" not in html_text
+
+
+def test_last_scan_stamp_uses_finish_time():
+    finished = "2026-10-18T20:10:00Z"
+    moment = parse_timestamp(finished)
+    assert moment is not None
+    summary = {"started_at": "2026-10-18T19:00:00Z", "finished_at": finished}
+    assert last_scan_stamp(summary) == local_stamp(moment)
+    assert last_scan_stamp(None) is None
+    assert last_scan_stamp({"started_at": "", "finished_at": ""}) is None
+
+
+def test_local_stamp_converts_utc_to_machine_time():
+    utc = datetime(2026, 10, 18, 20, 10, tzinfo=timezone.utc)
+    local = utc.astimezone()
+    assert local_stamp(utc) == local.strftime("%d/%m/%Y %H:%M")
+    assert "GMT" not in local_stamp(utc)
+    assert "UTC" not in local_stamp(utc)

@@ -10,7 +10,9 @@
   .layout { display: flex; max-width: 1200px; margin: 0 auto; padding: 1.5rem; gap: 2rem; }
   main { flex: 1; min-width: 0; }
   aside { width: 260px; flex-shrink: 0; }
-  h1 { font-size: 1.5rem; margin-bottom: 0.5rem; }
+  h1 { font-size: 1.5rem; margin-bottom: 0.35rem; }
+  .shown-counts { margin: 0 0 0.75rem; font-size: 1rem; }
+  .shown-counts strong { font-variant-numeric: tabular-nums; }
   .meta { color: #666; font-size: 0.875rem; margin-bottom: 1.5rem; }
   #schedule-status.running { color: #9a3412; font-weight: 600; }
   h2 { font-size: 1.125rem; margin: 1.5rem 0 0.75rem; border-bottom: 1px solid #ddd; padding-bottom: 0.25rem; }
@@ -75,7 +77,10 @@
 </aside>
 <main>
   <h1>jobscout</h1>
-  <p class="meta">Generated {{ generated_at }}</p>
+  <p class="shown-counts" id="shown-counts"><strong id="applied-count">{{ shown_applied }}</strong> applied · <strong id="open-count">{{ shown_open }}</strong> not applied</p>
+  {% if last_scan %}
+  <p class="meta">Last scan {{ last_scan }}</p>
+  {% endif %}
   {% if schedule %}
   <p class="meta" id="schedule-status">{{ schedule.label }}</p>
   {% endif %}
@@ -141,9 +146,29 @@ const ignoredKeys = [];
 const appliedKeys = [];
 const unappliedKeys = [];
 
+function cardsFor(key) {
+  return document.querySelectorAll(`[data-key="${key}"]`);
+}
+
+function shiftShown(appliedDelta, openDelta) {
+  const appliedEl = document.getElementById('applied-count');
+  const openEl = document.getElementById('open-count');
+  if (!appliedEl || !openEl) return;
+  appliedEl.textContent = String(Number(appliedEl.textContent) + appliedDelta);
+  openEl.textContent = String(Number(openEl.textContent) + openDelta);
+}
+
 function hideCard(key) {
-  const card = document.querySelector(`[data-key="${key}"]`);
-  if (card) card.classList.add('hidden');
+  let counted = false;
+  cardsFor(key).forEach((card) => {
+    if (card.classList.contains('hidden')) return;
+    if (!counted) {
+      if (card.classList.contains('applied')) shiftShown(-1, 0);
+      else shiftShown(0, -1);
+      counted = true;
+    }
+    card.classList.add('hidden');
+  });
 }
 
 function showCommand(text) {
@@ -186,8 +211,14 @@ function setApplyControl(card, applied) {
 }
 
 function applyJob(key) {
-  const card = document.querySelector(`[data-key="${key}"]`);
-  if (card) setApplyControl(card, true);
+  let counted = false;
+  cardsFor(key).forEach((card) => {
+    if (!counted && !card.classList.contains('hidden') && !card.classList.contains('applied')) {
+      shiftShown(1, -1);
+      counted = true;
+    }
+    setApplyControl(card, true);
+  });
   if (INTERACTIVE) {
     fetch('/api/apply', {
       method: 'POST',
@@ -235,8 +266,14 @@ function pollSchedule() {
 if (SCHEDULE && SCHEDULE.enabled) pollSchedule();
 
 function unapplyJob(key) {
-  const card = document.querySelector(`[data-key="${key}"]`);
-  if (card) setApplyControl(card, false);
+  let counted = false;
+  cardsFor(key).forEach((card) => {
+    if (!counted && !card.classList.contains('hidden') && card.classList.contains('applied')) {
+      shiftShown(-1, 1);
+      counted = true;
+    }
+    setApplyControl(card, false);
+  });
   if (INTERACTIVE) {
     fetch('/api/unapply', {
       method: 'POST',

@@ -3,14 +3,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from jobscout.config import AppConfig, WatchManuallyEntry
 from jobscout.models import ScoredJob, VerdictLabel
-from jobscout.schedule import next_check_label
+from jobscout.schedule import next_check_label, parse_timestamp
 
 _SUMMARY_FIELDS = (
     ("Fetched", "fetched"),
@@ -81,32 +81,59 @@ def build_groups(
     ]
 
     groups: list[ReportGroup] = []
+    placed: set[str] = set()
 
-    new_jobs = [m for m in filtered if m.is_new]
+    def take(predicate) -> list[ScoredJob]:
+        chosen: list[ScoredJob] = []
+        for match in filtered:
+            key = match.job.job_key
+            if key in placed or not predicate(match):
+                continue
+            placed.add(key)
+            chosen.append(match)
+        return chosen
+
+    new_jobs = take(lambda match: match.is_new)
     if new_jobs:
         groups.append(ReportGroup(title="New since the last run", jobs=new_jobs))
 
-    strong = [m for m in filtered if m.verdict.verdict == VerdictLabel.STRONG and not m.is_new]
-    strong.extend(m for m in new_jobs if m.verdict.verdict == VerdictLabel.STRONG)
+    strong = take(lambda match: match.verdict.verdict == VerdictLabel.STRONG)
     if strong:
-        seen = set()
-        unique_strong = []
-        for m in strong:
-            if m.job.job_key not in seen:
-                seen.add(m.job.job_key)
-                unique_strong.append(m)
-        groups.append(ReportGroup(title="Strong matches", jobs=unique_strong))
+        groups.append(ReportGroup(title="Strong matches", jobs=strong))
 
-    worth = [
-        m
-        for m in filtered
-        if m.verdict.verdict == VerdictLabel.POSSIBLE
-        and m.job.job_key not in {j.job.job_key for g in groups for j in g.jobs}
-    ]
+    worth = take(lambda match: match.verdict.verdict == VerdictLabel.POSSIBLE)
     if worth:
         groups.append(ReportGroup(title=f"Worth a look (score >= {threshold})", jobs=worth))
 
     return groups
+
+
+def local_stamp(moment: datetime | None = None) -> str:
+    """Wall-clock date and time on this machine, as ``dd/mm/yyyy HH:MM``."""
+    local = (moment or datetime.now(timezone.utc)).astimezone()
+    return local.strftime("%d/%m/%Y %H:%M")
+
+
+def last_scan_stamp(summary: dict | None) -> str | None:
+    """Local time the latest scan finished.
+
+    Stored run times are UTC. The page shows when that scan ended, not when
+    the viewer last rebuilt the page.
+    """
+    if not summary:
+        return None
+    raw = str(summary.get("finished_at") or summary.get("started_at") or "")
+    moment = parse_timestamp(raw)
+    if moment is None:
+        return None
+    return local_stamp(moment)
+
+
+def shown_counts(groups: list[ReportGroup]) -> tuple[int, int]:
+    """Applied and not-applied postings actually listed on the page."""
+    jobs = [job for group in groups for job in group.jobs]
+    applied = sum(1 for job in jobs if job.applied)
+    return applied, len(jobs) - applied
 
 
 def _schedule_view(
@@ -147,12 +174,14 @@ def write_reports(
     output_dir = config.output_dir
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    today = datetime.now(UTC).strftime("%Y-%m-%d")
+    now = datetime.now(timezone.utc).astimezone()
+    today = now.strftime("%Y-%m-%d")
     threshold = config.preferences.score_threshold
     summary = run_summary_view(run)
     if summary is not None:
         mark_new_since_run(matches, run)
     groups = build_groups(matches, threshold)
+    shown_applied, shown_open = shown_counts(groups)
     watch = config.companies.watch_manually
     scoring_errors = scoring_errors or []
 
@@ -171,9 +200,11 @@ def write_reports(
         interactive=interactive,
         pending_scoring=pending_scoring,
         scoring_errors=scoring_errors,
-        generated_at=datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC"),
+        last_scan=last_scan_stamp(summary),
         run_summary=summary,
         schedule=_schedule_view(config, summary, interactive, schedule_enabled),
+        shown_applied=shown_applied,
+        shown_open=shown_open,
     )
     md = _render_markdown(
         groups,
@@ -183,6 +214,8 @@ def write_reports(
         pending_scoring,
         scoring_errors,
         summary,
+        shown_applied,
+        shown_open,
     )
 
     html_dated = output_dir / f"report-{today}.html"
@@ -206,8 +239,15 @@ def _render_markdown(
     pending_scoring: int = 0,
     scoring_errors: list[str] | None = None,
     run_summary: dict | None = None,
+    shown_applied: int = 0,
+    shown_open: int = 0,
 ) -> str:
-    lines = ["# jobscout report", ""]
+    lines = [
+        "# jobscout report",
+        "",
+        f"**Shown:** {shown_applied} applied, {shown_open} not applied",
+        "",
+    ]
     if run_summary:
         lines.append("## Run summary")
         lines.append("")
